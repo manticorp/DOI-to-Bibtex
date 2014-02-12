@@ -18,7 +18,8 @@ if($validDOI) {
     \*****************************/
 
     $service_url = 'http://search.crossref.org/?q=' . urlencode($doi);
-    $result = $APIresult;
+    $result = scrape($service_url);
+    updateLeft($result, $APIresult);
 }
 
 ?>
@@ -162,10 +163,7 @@ function trimToCite($txt){
 function scrape($url) {
     global $responseFormat;
     global $doi;
-    $html = @file_get_html( $url );
-    if(!$html){
-        $html = str_get_html(get_web_page($url)['content']);
-    }
+    $html = file_get_html( $url );
     $result = array();
     $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
     $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
