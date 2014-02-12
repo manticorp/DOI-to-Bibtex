@@ -1,14 +1,17 @@
 <?php
 include("simple_html_dom.php");
+$validDOI  = false;
 
-$doi = (isset($_REQUEST["doi"]))? $_REQUEST["doi"] : "10.1086/377226";
-$responseFormat = 'json';
+if(isset($_REQUEST["doi"])){
+    $doi = $_REQUEST["doi"];
+    $responseFormat = 'json';
 
-//next example will recieve all messages for specific conversation
-$service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
-$decoded = json_decode(file_get_contents($service_url));
+    //next example will recieve all messages for specific conversation
+    $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
+    $decoded = json_decode(file_get_contents($service_url));
 
-$validDOI = (count($decoded) == 0) ? false : true;
+    $validDOI = (count($decoded) == 0 && !isset($_REQUEST["doi"])) ? false : true;
+}
 
 if($validDOI) {
     $APIresult = objectToArray($decoded[0]);
@@ -32,6 +35,14 @@ if($validDOI) {
 <style>
 body{
     font-size: 0.9em;
+    max-width: 100%;
+}
+
+pre {
+    display: block;
+    overflow: scroll;
+    text-wrap: normal;
+    max-width: 100%;
 }
 
 h1,h2,h3,h4,h5,h6, p, input, .btn {
@@ -94,29 +105,38 @@ input {
 </head><body>
 <h1>Input DOI</h1>
 <form action="" method="GET">
-    <input type="text" name="doi" id="doi" class="doi-input" placeholder="DOI, e.g 10.1086/377226" />
+    <input type="text" name="doi" id="doi" class="doi-input" <? if(!isset($_REQUEST["doi"])):?>autofocus <?endif;?>placeholder="DOI, e.g 10.1086/377226" />
     <button type="submit" class="btn">Submit</button>
 </form>
 <h1>Scraping Result</h1>
+<?if(isset($_REQUEST["doi"])):?>
 <p><a href="<?= $service_url;?>" target="_blank">From: <?= $service_url;?></a></p>
+<?endif;?>
 <pre>
 <?php 
-if($validDOI){
+if($validDOI === true){
     print_r($result);
 } else {
-    echo "Invladid DOI: '$doi', please try again";
+    if(isset($_REQUEST["doi"]))
+        echo "Invladid DOI: '$doi', please try again";
+    else
+        echo "Please enter a DOI";
 }?>
 </pre>  
 <h1><i class="bibtex"></i></h1>
 <a href="#" id="copy-to-clipboard" class="btn">Copy <i class="bibtex"></i></a><a href="#" id="copy-cite-text" data-cite="\cite{<?= trimToCite($doi);?>}" class="btn">Copy <i class="latex"></i> \cite</a>
 <textarea id="result-box" rows=20 onclick="if(selected === 2) this.select(); selected = (selected + 1) % 3;" style="width: 100%">
 <?php 
-if($validDOI){
+if($validDOI === true){
     echo generateBibtex($result);
 } else {
-    echo "Invladid DOI: '$doi', please try again";
+    if(isset($_REQUEST["doi"]))
+        echo "Invladid DOI: '$doi', please try again";
+    else
+        echo "Please enter a DOI";
 }?>
 </textarea>
+<?if(isset($_REQUEST["doi"])):?>
 <script type="text/javascript">var selected = 0; document.getElementById('result-box').select();</script>
 <script type="text/javascript">
     $(document).ready(function(){
@@ -130,6 +150,7 @@ if($validDOI){
         });
     });
 </script>
+<?endif;?>
 </body></html>
 <?php
 function textToNumber( $text ){
