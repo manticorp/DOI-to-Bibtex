@@ -191,6 +191,18 @@ function getBibtexType($type){
     }
 }
 
+function sendResponse( $code = 400, $data = array('message' => 'Invalid input'), $responseFormat = "json" ) {
+    http_response_code( $code );
+    switch( strtolower( $responseFormat ) ){
+        // other response formats here if needed.
+        case 'json':
+        case 'application/json':
+        default:
+            header('Content-type: application/json');
+            echo json_encode($data);
+    }
+}
+
 function sentenceCase($str) {
    $cap = true;
    $ret='';
@@ -205,4 +217,33 @@ function sentenceCase($str) {
        $ret .= $letter;
    }
    return $ret;
+}
+
+
+function get_web_page( $url )
+{
+    $options = array(
+        CURLOPT_RETURNTRANSFER => true,     // return web page
+        CURLOPT_HEADER         => false,    // don't return headers
+        CURLOPT_FOLLOWLOCATION => true,     // follow redirects
+        CURLOPT_ENCODING       => "",       // handle all encodings
+        CURLOPT_USERAGENT      => "spider", // who am i
+        CURLOPT_AUTOREFERER    => true,     // set referer on redirect
+        CURLOPT_CONNECTTIMEOUT => 120,      // timeout on connect
+        CURLOPT_TIMEOUT        => 120,      // timeout on response
+        CURLOPT_MAXREDIRS      => 10,       // stop after 10 redirects
+    );
+
+    $ch      = curl_init( $url );
+    curl_setopt_array( $ch, $options );
+    $content = curl_exec( $ch );
+    $err     = curl_errno( $ch );
+    $errmsg  = curl_error( $ch );
+    $header  = curl_getinfo( $ch );
+    curl_close( $ch );
+
+    $header['errno']   = $err;
+    $header['errmsg']  = $errmsg;
+    $header['content'] = $content;
+    return $header;
 }
