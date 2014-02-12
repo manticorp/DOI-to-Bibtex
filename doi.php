@@ -161,7 +161,7 @@ function trimToCite($txt){
 
 function scrape($url) {
     global $doi;
-    $html = @str_get_html(@get_web_page($url)['content']);
+    $html = str_get_html(file_get_contents($url));
     $result = array();
     $result["DOI"]     = $doi;
     return $result;
