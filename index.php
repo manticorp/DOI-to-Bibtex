@@ -165,7 +165,8 @@ function scrape($url) {
     global $doi;
     $html = @file_get_html( $url );
     if(!$html){
-        $html = str_get_html(get_web_page($url)['content']);
+        $page = get_web_page($url);
+        $html = str_get_html($page['content']);
     }
     if( true === false ){ // if it didn't work...
         $notice = $html->find('#main-content .notice', 0);
