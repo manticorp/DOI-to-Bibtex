@@ -18,8 +18,8 @@ if($validDOI) {
     \*****************************/
 
     $service_url = 'http://search.crossref.org/?q=' . urlencode($doi);
-    $result = $APIresult;
-    // updateLeft($result, $APIresult);
+    $result = scrape($service_url);
+    updateLeft($result, $APIresult);
 }
 
 ?>
@@ -158,6 +158,26 @@ function update(&$array1, $array2){
 
 function trimToCite($txt){
     return preg_replace('/[^0-9a-zA-Z\/\)(]/',"",str_replace(' ','',substr($txt,0,40)));
+}
+
+function scrape($url) {
+    global $responseFormat;
+    global $doi;
+    $html = str_get_html(get_web_page($url)['content']);
+    $result = array();
+    $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
+    $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
+    $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
+    $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
+    $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
+    $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
+    $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
+    $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
+    $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
+    $result["year"]    = trim(getNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
+    $result["month"]   = trim(removeNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
+    $result["DOI"]     = $doi;
+    return $result;
 }
 
 function getNumbersFromString($str){
