@@ -1,5 +1,4 @@
 <html><head>
-
 <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
 <script type="text/javascript" src="jquery.zclip.min.js"></script>
 <link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700' rel='stylesheet' type='text/css'>
@@ -67,4 +66,5 @@ input {
 </style>
 </head><body>
 <h1>This is a test</h1>
+<h2><?= "Hello"; ?></h2>
 </body></html>

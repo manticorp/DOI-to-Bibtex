@@ -130,6 +130,7 @@ if($validDOI){
         });
     });
 </script>
+</body></html>
 <?php
 function textToNumber( $text ){
     return intval(preg_replace('/[\)\(, ]/', '', $text));
