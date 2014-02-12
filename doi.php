@@ -1,8 +1,5 @@
 <?php
-include("simple_html_dom.php");
-
 $doi = (isset($_REQUEST["doi"]))? $_REQUEST["doi"] : "10.1086/377226";
-$responseFormat = 'json';
 
 //next example will recieve all messages for specific conversation
 $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
@@ -18,8 +15,7 @@ if($validDOI) {
     \*****************************/
 
     $service_url = 'http://search.crossref.org/?q=' . urlencode($doi);
-    $result = scrape($service_url);
-    updateLeft($result, $APIresult);
+    $result = $APIresult;
 }
 
 ?>
@@ -160,38 +156,6 @@ function trimToCite($txt){
     return preg_replace('/[^0-9a-zA-Z\/\)(]/',"",str_replace(' ','',substr($txt,0,40)));
 }
 
-function scrape($url) {
-    global $responseFormat;
-    global $doi;
-    $html = @file_get_html( $url );
-    if(!$html){
-        $html = str_get_html(get_web_page($url)['content']);
-    }
-    if( true === false ){ // if it didn't work...
-        $notice = $html->find('#main-content .notice', 0);
-        if($notice !== null){
-            sendResponse( 400, array('message' => $notice->plaintext, 'plain' => $notice->plaintext), $responseFormat );
-        } else {
-            sendResponse( 400, array('message' => "Unknown error - possible url failure. Is you URL a page that returns results?"), $responseFormat );
-        }
-        exit();
-    }
-    $result = array();
-    $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
-    $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
-    $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
-    $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
-    $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
-    $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
-    $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
-    $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
-    $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
-    $result["year"]    = trim(getNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
-    $result["month"]   = trim(removeNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
-    $result["DOI"]     = $doi;
-    return $result;
-}
-
 function getNumbersFromString($str){
     return preg_replace("/[^0-9]/","",$str);
 }
@@ -227,18 +191,6 @@ function getBibtexType($type){
     }
 }
 
-function sendResponse( $code = 400, $data = array('message' => 'Invalid input'), $responseFormat = "json" ) {
-    http_response_code( $code );
-    switch( strtolower( $responseFormat ) ){
-        // other response formats here if needed.
-        case 'json':
-        case 'application/json':
-        default:
-            header('Content-type: application/json');
-            echo json_encode($data);
-    }
-}
-
 function sentenceCase($str) {
    $cap = true;
    $ret='';
@@ -253,33 +205,4 @@ function sentenceCase($str) {
        $ret .= $letter;
    }
    return $ret;
-}
-
-
-function get_web_page( $url )
-{
-    $options = array(
-        CURLOPT_RETURNTRANSFER => true,     // return web page
-        CURLOPT_HEADER         => false,    // don't return headers
-        CURLOPT_FOLLOWLOCATION => true,     // follow redirects
-        CURLOPT_ENCODING       => "",       // handle all encodings
-        CURLOPT_USERAGENT      => "spider", // who am i
-        CURLOPT_AUTOREFERER    => true,     // set referer on redirect
-        CURLOPT_CONNECTTIMEOUT => 120,      // timeout on connect
-        CURLOPT_TIMEOUT        => 120,      // timeout on response
-        CURLOPT_MAXREDIRS      => 10,       // stop after 10 redirects
-    );
-
-    $ch      = curl_init( $url );
-    curl_setopt_array( $ch, $options );
-    $content = curl_exec( $ch );
-    $err     = curl_errno( $ch );
-    $errmsg  = curl_error( $ch );
-    $header  = curl_getinfo( $ch );
-    curl_close( $ch );
-
-    $header['errno']   = $err;
-    $header['errmsg']  = $errmsg;
-    $header['content'] = $content;
-    return $header;
 }
