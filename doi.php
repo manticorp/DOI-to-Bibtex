@@ -2,7 +2,6 @@
 include("simple_html_dom.php");
 
 $doi = (isset($_REQUEST["doi"]))? $_REQUEST["doi"] : "10.1086/377226";
-$responseFormat = 'json';
 
 //next example will recieve all messages for specific conversation
 $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
@@ -161,21 +160,7 @@ function trimToCite($txt){
 }
 
 function scrape($url) {
-    global $responseFormat;
     global $doi;
-    $html = str_get_html(get_web_page($url)['content']);
-    $result = array();
-    $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
-    $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
-    $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
-    $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
-    $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
-    $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
-    $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
-    $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
-    $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
-    $result["year"]    = trim(getNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
-    $result["month"]   = trim(removeNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
     $result["DOI"]     = $doi;
     return $result;
 }
