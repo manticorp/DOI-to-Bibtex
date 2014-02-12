@@ -1,4 +1,6 @@
 <?php
+include("simple_html_dom.php");
+
 $doi = (isset($_REQUEST["doi"]))? $_REQUEST["doi"] : "10.1086/377226";
 
 //next example will recieve all messages for specific conversation
