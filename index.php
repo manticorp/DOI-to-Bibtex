@@ -6,17 +6,7 @@ $responseFormat = 'json';
 
 //next example will recieve all messages for specific conversation
 $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
-
-$curl = curl_init($service_url);
-curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-$curl_response = curl_exec($curl);
-if ($curl_response === false) {
-    $info = curl_getinfo($curl);
-    curl_close($curl);
-    die('error occured during curl exec. Additioanl info: ' . var_export($info));
-}
-curl_close($curl);
-$decoded = json_decode($curl_response);
+$decoded = json_decode(file_get_contents($service_url));
 
 $validDOI = (count($decoded) == 0) ? false : true;
 
