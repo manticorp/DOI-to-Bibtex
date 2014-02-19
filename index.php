@@ -2,23 +2,29 @@
 include("simple_html_dom.php");
 $validDOI  = false;
 $validISBN = false;
+$validURL  = false;
 $valid = false;
 $results = array();
 
 if(isset($_REQUEST["query"])){
     $doi = $_REQUEST["query"];
     $responseFormat = 'json';
-
-    //next example will recieve all messages for specific conversation
     $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
-    $results["doi"] = json_decode(file_get_contents($service_url));
-    $validDOI = (count($results["doi"]) !== 0 && isset($_REQUEST["query"]));
-    
     $isbn_url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode(preg_replace("/[^0-9a-zA-Z]*/","",$doi));
-    $results["isbn"] = json_decode(file_get_contents($isbn_url));
-    $validISBN = $results["isbn"]->totalItems > 0;
     
-    $valid = $validDOI || $validISBN;
+    if(filter_var($doi, FILTER_VALIDATE_URL)){
+        $validURL = true;
+        $results["url"] = scrapeURL($doi);
+    } else {
+        //next example will recieve all messages for specific conversation
+        $results["doi"] = json_decode(file_get_contents($service_url));
+        $validDOI = (count($results["doi"]) !== 0 && isset($_REQUEST["query"]));
+        
+        $results["isbn"] = json_decode(file_get_contents($isbn_url));
+        $validISBN = $results["isbn"]->totalItems > 0;
+    }
+    
+    $valid = $validDOI || $validISBN || $validURL;
     
     // echo"<pre>";
     // var_dump(array("DOI"=>$validDOI,"ISBN"=>$validISBN,"overall"=>$valid));
@@ -35,19 +41,20 @@ if($validDOI === true) {
     \*****************************/
 
     $service_url = 'http://search.crossref.org/?q=' . urlencode($doi);
-    $result = scrape($service_url);
+    $result = scrapeDOI($service_url);
     updateLeft($result, $APIresult);
     
 } else if ($validISBN === true) {
     $result = gbooksToArray($results["isbn"]->items[0]);
+} else if ($validURL === true) {
+    $result = $results["url"]["actual"];
 } else {
-
 }
 
 ?>
 
 <html><head>
-<title>DOI/ISBN to BibTeX Converter<?if(isset($_REQUEST["query"])){ echo " - " . $_REQUEST["query"];};?></title>
+<title>DOI/ISBN/URL to BibTeX Converter<?if(isset($_REQUEST["query"])){ echo " - " . $_REQUEST["query"];};?></title>
 <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
 <script type="text/javascript" src="jquery.zclip.min.js"></script>
 <link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700' rel='stylesheet' type='text/css'>
@@ -117,23 +124,28 @@ input {
     margin: 4px;
 }
 
+.query-input{
+    min-width: 300px;
+}
+
 .btn:hover {
     box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.03) inset;
 }
 </style>
 </head><body>
-<h1>Input DOI/ISBN</h1>
+<h1>Input DOI/ISBN/URL</h1>
 <form action="" method="GET">
-    <input type="text" name="query" id="query" class="doi-input" <? if(!isset($_REQUEST["query"])):?>autofocus <?endif;?>placeholder="DOI/ISBN, e.g 10.1086/377226" />
+    <input type="text" name="query" id="query" class="query-input" <? if(!isset($_REQUEST["query"])):?>autofocus <?endif;?>placeholder="DOI/ISBN/URL, e.g 10.1086/377226" />
     <button type="submit" class="btn">Submit</button>
 </form>
 <h1>Scraping Result</h1>
 <?if(isset($_REQUEST["query"])):?>
     <?if($validDOI):?>
-    <p><a href="<?= $service_url;?>" target="_blank">From: <?= $service_url;?></a></p>
-    <?endif;?>
-    <?if($validISBN):?>
-    <p><a href="<?= $isbn_url;?>" target="_blank">From: <?= $isbn_url;?></a></p>
+    <p>From: <a href="<?= $service_url;?>" target="_blank"><?= $service_url;?></a></p>
+    <?elseif($validISBN):?>
+    <p>From: <a href="<?= $isbn_url;?>" target="_blank"><?= $isbn_url;?></a></p>
+    <?elseif($validURL):?>
+    <p>From: <a href="<?= $doi;?>" target="_blank"><?= $doi;?></a></p>
     <?endif;?>
 <?endif;?>
 <pre>
@@ -142,24 +154,33 @@ if($valid === true){
     print_r($result);
 } else {
     if(isset($_REQUEST["query"]))
-        echo "Invalid DOI/ISBN: '$doi', please try again";
+        echo "Invalid DOI/ISBN/URL: '$doi', please try again";
     else
-        echo "Please enter a DOI/ISBN";
+        echo "Please enter a DOI/ISBN/URL";
 }?>
 </pre>  
 <h1><i class="bibtex"></i></h1>
-<a href="#" id="copy-to-clipboard" class="btn">Copy <i class="bibtex"></i></a><a href="#" id="copy-cite-text" data-cite="\cite{<?= trimToCite($doi);?>}" class="btn">Copy <i class="latex"></i> \cite</a>
-<textarea id="result-box" rows=20 onclick="if(selected === 2) this.select(); selected = (selected + 1) % 3;" style="width: 100%">
+<a href="#" id="copy-to-clipboard" class="btn">Copy <i class="bibtex"></i></a><a href="#" id="copy-cite-text" data-cite="\cite{<?= trimToCite(($validURL && isset($result["title"])) ? $result["title"] : $doi);?>}" class="btn">Copy <i class="latex"></i> \cite</a>
+<textarea id="result-box" rows=<?php echo (isset($result)) ? count(explode("\n",generateBibtex($result)))+1 : 10;?> onclick="if(selected === 2) this.select(); selected = (selected + 1) % 3;" style="width: 100%">
 <?php 
 if($valid === true){
     echo generateBibtex($result);
 } else {
     if(isset($_REQUEST["query"]))
-        echo "Invalid DOI/ISBN: '$doi', please try again";
+        echo "Invalid DOI/ISBN/URL: '$doi', please try again";
     else
-        echo "Please enter a DOI/ISBN";
+        echo "Please enter a DOI/ISBN/URL";
 }?>
 </textarea>
+<?if($validURL):?>
+<p>Note: the above bibtex code assumes you are using Biblatex. If you are note using biblatex, please use the code below.</p>
+<textarea rows=2 onclick="this.select();" style="width: 100%">
+\cite{<?echo trimToCite(($validURL && isset($result["title"])) ? $result["title"] : $doi);?>}
+</textarea>
+<textarea rows=<?php echo count(explode("\n",generateBibtex($results["url"]["alt"])))+1;?> onclick="this.select();" style="width: 100%">
+<?echo generateBibtex($results["url"]["alt"]);?>
+</textarea>
+<?endif;?>
 <?if(isset($_REQUEST["query"])):?>
 <script type="text/javascript">var selected = 0; document.getElementById('result-box').select();</script>
 <script type="text/javascript">
@@ -196,6 +217,7 @@ function gbooksToArray( $gb ){
     }
     return $result;
 }
+
 function textToNumber( $text ){
     return intval(preg_replace('/[\)\(, ]/', '', $text));
 }
@@ -224,7 +246,42 @@ function trimToCite($txt){
     return preg_replace('/[^0-9a-zA-Z\/\)(]/',"",str_replace(' ','',substr($txt,0,40)));
 }
 
-function scrape($url) {
+function scrapeURL($url){
+    global $responseFormat;
+    global $doi;
+    $html = @file_get_html( $url );
+    if(!$html){
+        $page = get_web_page($url);
+        $html = str_get_html($page['content']);
+    }
+    if( true === false ){ // if it didn't work...
+        $notice = $html->find('#main-content .notice', 0);
+        if($notice !== null){
+            sendResponse( 400, array('message' => $notice->plaintext, 'plain' => $notice->plaintext), $responseFormat );
+        } else {
+            sendResponse( 400, array('message' => "Unknown error - possible url failure. Is you URL a page that returns results?"), $responseFormat );
+        }
+        exit();
+    }
+    $result = array("actual", "alt");
+    $result["actual"]["title"] = trim($html->find("title",0)->plaintext);
+    $date = new DateTime();
+    $result["actual"]["note"] = "Accessed: " . $date->format("Y-m-d h:i:s");
+    foreach(array("description", "author", "keywords") as $tag){
+        if($html->find("meta[name=".$tag."]",0) != null){
+            $result["actual"][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
+        }
+    }
+    $result["alt"] = $result["actual"];
+    $result["actual"]["type"] = "ONLINE";
+    $result["actual"]["url"] = $doi;
+    $result["actual"]["urldate"] = $date->format("Y-m-d");
+    $result["alt"]["type"] = "misc";
+    $result["alt"]["howpublished"] = "\url{" . $doi . "}";
+    return $result;
+}
+
+function scrapeDOI($url) {
     global $responseFormat;
     global $doi;
     $html = @file_get_html( $url );
@@ -267,15 +324,22 @@ function removeNumbersFromString($str){
 
 function generateBibtex($input){
     global $doi;
+    global $validURL;
     $default = array("type"=> "article");
     
     update($default, $input);
     
-    $result = "@" . $default["type"] . "{" . trimToCite($doi);
+    $cite = trimToCite(($validURL && isset($input["title"])) ? $input["title"] : $doi);
+    
+    $result = "@" . $default["type"] . "{" . $cite;
     unset($default["type"]);
     foreach($default as $key => $value){
-        if($value !== ""){
-            $result .= ",\n    " . $key . " = {" . $value . "}";
+        if($value !== "" && $value !== null && isset($value) && !empty($value)){
+            if($value[0] == '\\' || $value[0] == '{'){
+                $result .= ",\n    " . $key . " = " . $value;
+            } else {
+                $result .= ",\n    " . $key . " = {" . $value . "}";
+            }
         }
     }
     $result .= "\n}";
