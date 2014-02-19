@@ -2,15 +2,15 @@
 include("simple_html_dom.php");
 $validDOI  = false;
 
-if(isset($_REQUEST["doi"])){
-    $doi = $_REQUEST["doi"];
+if(isset($_REQUEST["query"])){
+    $doi = $_REQUEST["query"];
     $responseFormat = 'json';
 
     //next example will recieve all messages for specific conversation
     $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
     $decoded = json_decode(file_get_contents($service_url));
 
-    $validDOI = (count($decoded) == 0 && !isset($_REQUEST["doi"])) ? false : true;
+    $validDOI = (count($decoded) == 0 && !isset($_REQUEST["query"])) ? false : true;
 }
 
 if($validDOI) {
@@ -28,7 +28,7 @@ if($validDOI) {
 ?>
 
 <html><head>
-<title>DOI to BibTeX Converter<?if(isset($_REQUEST["doi"])){ echo " - " . $_REQUEST["doi"];};?></title>
+<title>DOI/ISBN to BibTeX Converter<?if(isset($_REQUEST["query"])){ echo " - " . $_REQUEST["query"];};?></title>
 <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
 <script type="text/javascript" src="jquery.zclip.min.js"></script>
 <link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700' rel='stylesheet' type='text/css'>
@@ -103,13 +103,13 @@ input {
 }
 </style>
 </head><body>
-<h1>Input DOI</h1>
+<h1>Input DOI/ISBN</h1>
 <form action="" method="GET">
-    <input type="text" name="doi" id="doi" class="doi-input" <? if(!isset($_REQUEST["doi"])):?>autofocus <?endif;?>placeholder="DOI, e.g 10.1086/377226" />
+    <input type="text" name="query" id="query" class="doi-input" <? if(!isset($_REQUEST["query"])):?>autofocus <?endif;?>placeholder="DOI/ISBN, e.g 10.1086/377226" />
     <button type="submit" class="btn">Submit</button>
 </form>
 <h1>Scraping Result</h1>
-<?if(isset($_REQUEST["doi"])):?>
+<?if(isset($_REQUEST["query"])):?>
 <p><a href="<?= $service_url;?>" target="_blank">From: <?= $service_url;?></a></p>
 <?endif;?>
 <pre>
@@ -117,10 +117,10 @@ input {
 if($validDOI === true){
     print_r($result);
 } else {
-    if(isset($_REQUEST["doi"]))
-        echo "Invladid DOI: '$doi', please try again";
+    if(isset($_REQUEST["query"]))
+        echo "Invladid DOI/ISBN: '$doi', please try again";
     else
-        echo "Please enter a DOI";
+        echo "Please enter a DOI/ISBN";
 }?>
 </pre>  
 <h1><i class="bibtex"></i></h1>
@@ -130,13 +130,13 @@ if($validDOI === true){
 if($validDOI === true){
     echo generateBibtex($result);
 } else {
-    if(isset($_REQUEST["doi"]))
-        echo "Invladid DOI: '$doi', please try again";
+    if(isset($_REQUEST["query"]))
+        echo "Invladid DOI/ISBN: '$doi', please try again";
     else
-        echo "Please enter a DOI";
+        echo "Please enter a DOI/ISBN";
 }?>
 </textarea>
-<?if(isset($_REQUEST["doi"])):?>
+<?if(isset($_REQUEST["query"])):?>
 <script type="text/javascript">var selected = 0; document.getElementById('result-box').select();</script>
 <script type="text/javascript">
     $(document).ready(function(){
