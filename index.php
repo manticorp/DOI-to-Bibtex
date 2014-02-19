@@ -14,7 +14,7 @@ if(isset($_REQUEST["query"])){
     $results["doi"] = json_decode(file_get_contents($service_url));
     $validDOI = (count($results["doi"]) !== 0 && isset($_REQUEST["query"]));
     
-    $isbn_url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode(preg_replace("/[^0-9]*/","",$doi));
+    $isbn_url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode(preg_replace("/[^0-9a-zA-Z]*/","",$doi));
     $results["isbn"] = json_decode(file_get_contents($isbn_url));
     $validISBN = $results["isbn"]->totalItems > 0;
     
