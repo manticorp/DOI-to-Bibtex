@@ -129,7 +129,12 @@ input {
 </form>
 <h1>Scraping Result</h1>
 <?if(isset($_REQUEST["query"])):?>
-<p><a href="<?= $service_url;?>" target="_blank">From: <?= $service_url;?></a></p>
+    <?if($validDOI):?>
+    <p><a href="<?= $service_url;?>" target="_blank">From: <?= $service_url;?></a></p>
+    <?endif;?>
+    <?if($validISBN):?>
+    <p><a href="<?= $isbn_url;?>" target="_blank">From: <?= $isbn_url;?></a></p>
+    <?endif;?>
 <?endif;?>
 <pre>
 <?php 
