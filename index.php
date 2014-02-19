@@ -174,9 +174,6 @@ if($valid === true){
 </textarea>
 <?if($validURL):?>
 <p>Note: the above bibtex code assumes you are using Biblatex. If you are note using biblatex, please use the code below.</p>
-<textarea rows=2 onclick="this.select();" style="width: 100%">
-\cite{<?echo trimToCite(($validURL && isset($result["title"])) ? $result["title"] : $doi);?>}
-</textarea>
 <textarea rows=<?php echo count(explode("\n",generateBibtex($results["url"]["alt"])))+1;?> onclick="this.select();" style="width: 100%">
 <?echo generateBibtex($results["url"]["alt"]);?>
 </textarea>
