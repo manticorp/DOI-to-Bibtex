@@ -1,6 +1,9 @@
 <?php
 include("simple_html_dom.php");
 $validDOI  = false;
+$validISBN = false;
+$valid = false;
+$results = array();
 
 if(isset($_REQUEST["query"])){
     $doi = $_REQUEST["query"];
@@ -8,14 +11,25 @@ if(isset($_REQUEST["query"])){
 
     //next example will recieve all messages for specific conversation
     $service_url = 'http://search.crossref.org/dois?q=' . urlencode($doi);
-    $decoded = json_decode(file_get_contents($service_url));
-
-    $validDOI = (count($decoded) == 0 && !isset($_REQUEST["query"])) ? false : true;
+    $results["doi"] = json_decode(file_get_contents($service_url));
+    $validDOI = (count($results["doi"]) !== 0 && isset($_REQUEST["query"]));
+    
+    $isbn_url = "https://www.googleapis.com/books/v1/volumes?q=isbn:" . urlencode(preg_replace("/[^0-9]*/","",$doi));
+    $results["isbn"] = json_decode(file_get_contents($isbn_url));
+    $validISBN = $results["isbn"]->totalItems > 0;
+    
+    $valid = $validDOI || $validISBN;
+    
+    // echo"<pre>";
+    // var_dump(array("DOI"=>$validDOI,"ISBN"=>$validISBN,"overall"=>$valid));
+    // var_dump($results);
+    // exit();
 }
 
-if($validDOI) {
-    $APIresult = objectToArray($decoded[0]);
+if($validDOI === true) {
 
+    $APIresult = objectToArray($results["doi"]);
+    
     /*****************************\
     * Scraping Result
     \*****************************/
@@ -23,6 +37,11 @@ if($validDOI) {
     $service_url = 'http://search.crossref.org/?q=' . urlencode($doi);
     $result = scrape($service_url);
     updateLeft($result, $APIresult);
+    
+} else if ($validISBN === true) {
+    $result = gbooksToArray($results["isbn"]->items[0]);
+} else {
+
 }
 
 ?>
@@ -114,11 +133,11 @@ input {
 <?endif;?>
 <pre>
 <?php 
-if($validDOI === true){
+if($valid === true){
     print_r($result);
 } else {
     if(isset($_REQUEST["query"]))
-        echo "Invladid DOI/ISBN: '$doi', please try again";
+        echo "Invalid DOI/ISBN: '$doi', please try again";
     else
         echo "Please enter a DOI/ISBN";
 }?>
@@ -127,11 +146,11 @@ if($validDOI === true){
 <a href="#" id="copy-to-clipboard" class="btn">Copy <i class="bibtex"></i></a><a href="#" id="copy-cite-text" data-cite="\cite{<?= trimToCite($doi);?>}" class="btn">Copy <i class="latex"></i> \cite</a>
 <textarea id="result-box" rows=20 onclick="if(selected === 2) this.select(); selected = (selected + 1) % 3;" style="width: 100%">
 <?php 
-if($validDOI === true){
+if($valid === true){
     echo generateBibtex($result);
 } else {
     if(isset($_REQUEST["query"]))
-        echo "Invladid DOI/ISBN: '$doi', please try again";
+        echo "Invalid DOI/ISBN: '$doi', please try again";
     else
         echo "Please enter a DOI/ISBN";
 }?>
@@ -153,6 +172,25 @@ if($validDOI === true){
 <?endif;?>
 </body></html>
 <?php
+function gbooksToArray( $gb ){
+    $vi = $gb->volumeInfo;
+    $result = array();
+    $result["title"]        = trim($vi->title);
+    $result["authors"]      = trim(implode(" and ", $vi->authors));
+    $result["type"]         = "book";
+    $result["link"]         = trim($gb->selfLink);
+    $result["categories"]   = trim(implode(", ", $vi->categories));
+    $result["description"]  = trim($vi->description);
+    $result["publisher"]    = trim($vi->publisher);
+    $date = new DateTime($vi->publishedDate);
+    $result["year"]         = trim($date->format("Y"));
+    $result["month"]        = trim($date->format("m"));
+    $result["day"]          = trim($date->format("d"));
+    foreach($vi->industryIdentifiers as $identifier){
+        $result[$identifier->type] = $identifier->identifier;
+    }
+    return $result;
+}
 function textToNumber( $text ){
     return intval(preg_replace('/[\)\(, ]/', '', $text));
 }
