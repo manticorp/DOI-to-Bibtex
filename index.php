@@ -187,7 +187,7 @@ function gbooksToArray( $gb ){
     $result["month"]        = trim($date->format("m"));
     $result["day"]          = trim($date->format("d"));
     foreach($vi->industryIdentifiers as $identifier){
-        $result[$identifier->type] = str_replace("_","",strtolower($identifier->identifier));
+        $result[str_replace("_","",strtolower($identifier->type))] = $identifier->identifier;
     }
     return $result;
 }
