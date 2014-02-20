@@ -261,20 +261,42 @@ function scrapeURL($url){
         exit();
     }
     $result = array("actual", "alt");
-    $result["actual"]["title"] = trim($html->find("title",0)->plaintext);
-    $date = new DateTime();
-    $result["actual"]["note"] = "Accessed: " . $date->format("Y-m-d h:i:s");
-    foreach(array("description", "author", "keywords") as $tag){
-        if($html->find("meta[name=".$tag."]",0) != null){
-            $result["actual"][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
+    if($html->find("meta[property=og:site_name]",0) !== null && $html->find("meta[property=og:site_name]",0)->content == "YouTube"){
+        foreach(array("keywords", "description", "title") as $tag){
+            if($html->find("meta[name=".$tag."]",0) != null){
+                $result["actual"][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
+            }
         }
+        $result["actual"]["author"] = trim($html->find("meta[name=attribution]",0)->content);
+        $result["actual"]["howpublished"] = trim($html->find("meta[property=og:type]",0)->content);
+        if($html->find("div#watch7-user-header a.yt-user-name",0) !== null){
+            $result["actual"]["author"] = trim($html->find("div#watch7-user-header a.yt-user-name",0)->plaintext);
+        }
+        if($html->find("span#eow-date",0) !== null){
+            $date = new DateTime($html->find("span#eow-date",0)->plaintext);
+            $result["actual"]["year"] = $date->format("Y");
+            $result["actual"]["month"] = $date->format("m");
+        }
+    } else {
+        foreach(array("description", "author", "keywords") as $tag){
+            if($html->find("meta[name=".$tag."]",0) != null){
+                $result["actual"][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
+            }
+        }
+        $result["actual"]["title"] = trim($html->find("title",0)->plaintext);
     }
+    
     $result["alt"] = $result["actual"];
+    
     $result["actual"]["type"] = "ONLINE";
     $result["actual"]["url"] = $doi;
     $result["actual"]["urldate"] = $date->format("Y-m-d");
+    
     $result["alt"]["type"] = "misc";
     $result["alt"]["howpublished"] = "\url{" . $doi . "}";
+    $date = new DateTime();
+    $result["alt"]["note"] = "Accessed: " . $date->format("Y-m-d h:i:s");
+    
     return $result;
 }
 
