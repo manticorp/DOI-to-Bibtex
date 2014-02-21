@@ -78,29 +78,29 @@ function getDataFromURL($url){
         return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
     }
     $html = getHTML( $url );
-    $result = array("actual" => array(), "alt" => array());
+    $result = array();
     if($html->find("meta[property=og:site_name]",0) !== null && $html->find("meta[property=og:site_name]",0)->content == "YouTube"){
-        $result["actual"] = array_merge($result["actual"], youtubeToData($html));
+        $result[0] = array_merge($result[0], youtubeToData($html));
     } else {
         foreach(array("description", "author", "keywords") as $tag){
             if($html->find("meta[name=".$tag."]",0) != null){
-                $result["actual"][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
+                $result[0][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
             }
         }
-        $result["actual"]["title"] = trim($html->find("title",0)->plaintext);
+        $result[0]["title"] = trim($html->find("title",0)->plaintext);
     }
     
-    $result["alt"] = $result["actual"];
+    $result[1] = $result[0];
     
-    $result["actual"]["type"] = "ONLINE";
-    $result["actual"]["url"] = $url;
+    $result[0]["type"] = "ONLINE";
+    $result[0]["url"] = $url;
     $date = new DateTime();
-    $result["actual"]["urldate"] = $date->format("Y-m-d");
+    $result[0]["urldate"] = $date->format("Y-m-d");
     
-    $result["alt"]["type"] = "misc";
-    $result["alt"]["howpublished"] = "\url{" . $url . "}";
+    $result[1]["type"] = "misc";
+    $result[1]["howpublished"] = "\url{" . $url . "}";
     $date = new DateTime();
-    $result["alt"]["note"] = "Accessed: " . $date->format("Y-m-d h:i:s");
+    $result[1]["note"] = "Accessed: " . $date->format("Y-m-d h:i:s");
     
     return returnStructure("url", $result, $url, $url);
 }

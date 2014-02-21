@@ -70,7 +70,7 @@ $(function(){
             } else {
                 $('#result').html('');
                 $.each(data.bibtex, function(i, bibtex) {
-                    $('#result').append(buildResult(bibtex));
+                    $('#result').append(buildResult(bibtex, i));
                 });
                 $('textarea').select();
                 zclipCopyLinks();
@@ -86,19 +86,19 @@ $(function(){
         $('.copy-bibtex-link').each(function(index){
             $(this).zclip({
                 path:'ZeroClipboard.swf',
-                copy:function(){return $('#' + citeToId($(this).data('cite'))).val();}
-            });
-            $(this).click(function(){
-                copiedWarning($(this));
+                copy:function(){var taid = "#" + $(this).data('ta'); console.log($(taid).val()); return $(taid).val().replace("\\","\\\\");},
+                afterCopy:function(){
+                    copiedWarning($(this));
+                }
             });
         });
         $('.copy-cite-link').each(function(index){
             $(this).zclip({
                 path:'ZeroClipboard.swf',
-                copy:function(){ return $(this).data('cite-text');}
-            });
-            $(this).click(function(){
-                copiedWarning($(this));
+                copy:function(){ return $(this).data('cite-text');},
+                afterCopy:function(){
+                    copiedWarning($(this));
+                }
             });
         });
     }
@@ -116,13 +116,24 @@ $(function(){
         $copied.animate({top: (position.top - 30) + "px", opacity: 0},500);
     }
     
-    function buildResult(bibtex){
+    function buildResult(bibtex, index){
+        index = (typeof index == "undefined") ? 0 : index;
         var $container = $('<div>').addClass('bibtex-result-container');
         
-        var lines = bibtex.text.split("\n");
-        var $textarea = $('<textarea>').attr('rows',lines.length + 1).addClass('bibtex-result').attr('id', citeToId(bibtex.cite)).val(bibtex.text);
+        console.log("INDEX = " + index);
+        var taid = (citeToId(bibtex.cite) + index);
         
-        var $copyBibtexLink = $('<a>').attr('href', 'javascript:void(0)').html('Copy <i class="bibtex"></i>').addClass('btn').addClass('copy-bibtex-link').attr('id',citeToId(bibtex.cite) + '-copy-bibtex').data('cite', bibtex.cite);
+        var lines = bibtex.text.split("\n");
+        var $textarea = $('<textarea>').attr('rows',lines.length + 1).addClass('bibtex-result').attr('id', taid).val(bibtex.text);
+        
+        var $copyBibtexLink = $('<a>')
+        .attr('href', 'javascript:void(0)')
+        .html('Copy <i class="bibtex"></i>')
+        .addClass('btn')
+        .addClass('copy-bibtex-link')
+        .attr('id',citeToId(bibtex.cite) + '-copy-bibtex')
+        .data('cite', bibtex.cite)
+        .data('ta', taid);
         
         var $copyCiteLink = $('<a>')
         .attr('href', 'javascript:void(0)')
