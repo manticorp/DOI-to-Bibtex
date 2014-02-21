@@ -10,7 +10,9 @@ $(function(){
         $(this).select();
     });
     
-    $('#submitQuery').click(doQuery);
+    $('#submitQuery').click(function(){
+        doQuery();
+    });
     
     $('#queryform').submit(function(){
         doQuery();
@@ -20,7 +22,6 @@ $(function(){
     function doQuery(){
         var hashParams = $.deparam.fragment()
         var query = hashParams.query || "";
-        console.log(query);
         if(query !== "") {
             loading();
             getAndDisplayBibtex(query);
@@ -84,25 +85,43 @@ $(function(){
         $('.copy-bibtex-link').each(function(index){
             $(this).zclip({
                 path:'ZeroClipboard.swf',
-                copy:function(){ return $('textarea#' + $(this).data('cite')).val();}
+                copy:function(){return $('#' + citeToId($(this).data('cite'))).val();}
+            });
+            $(this).click(function(){
+                copiedWarning($(this));
             });
         });
         $('.copy-cite-link').each(function(index){
             $(this).zclip({
                 path:'ZeroClipboard.swf',
-                copy:function(){return $(this).data('cite-text');}
+                copy:function(){ return $(this).data('cite-text');}
+            });
+            $(this).click(function(){
+                copiedWarning($(this));
             });
         });
+    }
+    
+    function copiedWarning($element, text){
+        text = text || "Copied...";
+        var position = $element.position();
+        var $copied = $element.clone();
+        $copied.addClass('disappearing-btn');
+        $copied.text("Copied");
+        $copied.css('left', position.left).css('top', position.top);
+        $copied.height($element.height()).width($element.width());
+        $copied.addClass('disappearing-btn-active');
+        $copied.insertAfter($element);
+        $copied.animate({top: (position.top - 30) + "px", opacity: 0},500);
     }
     
     function buildResult(bibtex){
         var $container = $('<div>').addClass('bibtex-result-container');
         
         var lines = bibtex.text.split("\n");
-        var $textarea = $('<textarea>').attr('rows',lines.length + 1).addClass('bibtex-result').attr('id', bibtex.cite).val(bibtex.text).data("HELLO","HI");
+        var $textarea = $('<textarea>').attr('rows',lines.length + 1).addClass('bibtex-result').attr('id', citeToId(bibtex.cite)).val(bibtex.text);
         
-        
-        var $copyBibtexLink = $('<a>').attr('href', 'javascript:void(0)').html('Copy <i class="bibtex"></i>').addClass('btn').addClass('copy-bibtex-link').attr('id',bibtex.cite + '-copy-bibtex').data('cite', bibtex.cite);
+        var $copyBibtexLink = $('<a>').attr('href', 'javascript:void(0)').html('Copy <i class="bibtex"></i>').addClass('btn').addClass('copy-bibtex-link').attr('id',citeToId(bibtex.cite) + '-copy-bibtex').data('cite', bibtex.cite);
         
         var $copyCiteLink = $('<a>')
         .attr('href', 'javascript:void(0)')
@@ -116,5 +135,9 @@ $(function(){
         $container.append($copyBibtexLink).append($copyCiteLink).append($textarea);
         
         return $container;
+    }
+    
+    function citeToId(cite){
+        return cite.replace(/[^a-zA-Z0-9]/gi, "");
     }
 });

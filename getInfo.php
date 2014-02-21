@@ -17,9 +17,7 @@ function getBibtex($query){
     if(filter_var($query, FILTER_VALIDATE_URL)){
         return getBibtexFromURL($query);
     } else {
-        $doi_url    = DOI_API_URL . urlencode($query);
-        $doi_result = json_decode(file_get_contents($doi_url));
-        if( count($doi_result) !== 0 ){
+        if( testDOI( $query ) ){
             return getBibtexFromDOI($query);
         } else {
             $isbn_url    = ISBN_API_URL . urlencode(cleanISBN($query));
@@ -46,11 +44,7 @@ function getBibtexFromISBN($isbn){
 
 function getDataFromDOI($doi){
     $url = DOI_SEARCH_URL . urlencode($doi);
-    $html = @file_get_html( $url );
-    if(!$html){
-        $page = get_web_page($url);
-        $html = str_get_html($page['content']);
-    }
+    $html = getHTML( $url );
     $result = array();
     $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
     $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
@@ -76,16 +70,17 @@ function getDataFromISBN($isbn){
 }
 
 function getDataFromURL($url){
-    $html = @file_get_html( $url );
-    if(!$html){
-        $page = get_web_page($url);
-        $html = str_get_html($page['content']);
+    if(strpos($url, "arxiv.org") !== false) {
+        if(strpos($url, "arxiv.org/pdf/")){
+            $url = str_replace("http://arxiv.org/pdf/","http://arxiv.org/abs/",$url);
+        }
+        $html = getHTML($url);
+        return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
     }
+    $html = getHTML( $url );
     $result = array("actual" => array(), "alt" => array());
     if($html->find("meta[property=og:site_name]",0) !== null && $html->find("meta[property=og:site_name]",0)->content == "YouTube"){
         $result["actual"] = array_merge($result["actual"], youtubeToData($html));
-    } else if(strpos($url, "arxiv.org") !== false) {
-        return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
     } else {
         foreach(array("description", "author", "keywords") as $tag){
             if($html->find("meta[name=".$tag."]",0) != null){
@@ -110,7 +105,22 @@ function getDataFromURL($url){
     return returnStructure("url", $result, $url, $url);
 }
 
-function cleanISBN($isbn){ return preg_replace("/[^0-9a-zA-Z]*/","",$isbn); }
+function getHTML($url){
+    $html = @file_get_html( $url );
+    if(!$html){
+        $page = get_web_page($url);
+        $html = str_get_html($page['content']);
+    }
+    return $html;
+}
+
+function testDOI( $doi ){
+    $doi_url    = DOI_API_URL . urlencode($doi);
+    $doi_result = json_decode(file_get_contents($doi_url));
+    return (count($doi_result) !== 0 );
+}
+
+function cleanISBN( $isbn ){ return preg_replace("/[^0-9a-zA-Z]*/","",$isbn); }
 
 function returnStructure($type, $data, $query, $url = null, $success = true){ return array("type" => $type, "data" => $data, "url" => $url,"query" => $query, "success" => $success); }
 
@@ -136,6 +146,11 @@ function gbooksToArray( $gb ){
 
 function arxivToData( $html ){
     $result = array();
+    if($html->find("td.doi",0) !== null){
+        $doi = $html->find("td.doi a",0)->plaintext;
+        $doi_data = getDataFromDOI($doi);
+        $result = $doi_data["data"][0];
+    }
     foreach(array("keywords", "description", "title") as $tag){
         if($html->find("meta[name=citation_".$tag."]",0) != null){
             $result[$tag] = trim($html->find("meta[name=citation_".$tag."]",0)->content);
@@ -231,7 +246,21 @@ function generateBibtex($data){
         $default = array("type"=> "article");
         update($default, $input);
         
-        $cite = trimToCite(($type === "url" && isset($input["title"])) ? $input["title"] : $query);
+        if($type === "url" || $type === "arxiv"){
+            if(isset($input["doi"])){
+                $cite = $input["doi"];
+            } else if(isset($input["DOI"])){
+                $cite = $input["DOI"];
+            } else if(isset($input["title"])) {
+                $cite = $input["title"];
+            } else {
+                $cite = $query;
+            }
+        } else {
+            $cite = $query;
+        }
+        
+        $cite = trimToCite($cite);
         
         $result = "@" . $default["type"] . "{" . $cite;
         unset($default["type"]);

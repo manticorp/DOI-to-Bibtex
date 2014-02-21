@@ -36,6 +36,16 @@ p { }
     color: #333;
     font-size: 0.8em;
     margin: 4px;
+    z-index: 0;
+}
+.disappearing-btn {
+    background: rgba(160,160,255,0.8);
+    z-index: 99;
+    position: absolute;
+    text-align: center;
+}
+.disappearing-btn-active {
+
 }
 .bibtex {
     height: 1.2em;
