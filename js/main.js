@@ -138,7 +138,6 @@ $(function(){
         index = (typeof index == "undefined") ? 0 : index;
         var $container = $('<div>').addClass('bibtex-result-container');
         
-        console.log("INDEX = " + index);
         var taid = (citeToId(bibtex.cite) + index);
         
         var lines = bibtex.text.split("\n");
