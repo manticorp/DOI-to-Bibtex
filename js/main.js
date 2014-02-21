@@ -72,6 +72,7 @@ $(function(){
                 $.each(data.bibtex, function(i, bibtex) {
                     $('#result').append(buildResult(bibtex));
                 });
+                $('textarea').select();
                 zclipCopyLinks();
             }
         }).fail(function(jqxhr, textStatus, error){
