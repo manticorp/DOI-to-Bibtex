@@ -2,7 +2,7 @@
     var clip = null;
 
     $.zeroclipboard = function (params) {
-        ZeroClipboard.setDefaults(params);
+        ZeroClipboard.config(params);
 
         clip = new ZeroClipboard();
 
@@ -15,11 +15,11 @@
         });
     };
 
-    var glueElement = function (params) {
+    var clipElement = function (params) {
         if (clip === null) {
             throw new Error("zeroclipboard jquery plugin: 'init' not called yet")
         }
-        clip.glue(this);
+        clip.clip(this);
 
         if (params.complete && $.isFunction(params.complete)) {
             this.bind('zeroclipboard_complete', params.complete);
@@ -32,10 +32,10 @@
 
     $.fn.zeroclipboard = function (params) {
         if (typeof params == "object" && !params.length) {
-            return this.each($.proxy(glueElement, this, params));
+            return this.each($.proxy(clipElement, this, params));
         } else if (typeof params == "string" && params.toLowerCase() == "remove") {
             return this.each(function () {
-                clip.unglue($(this));
+                clip.unclip($(this));
             });
         }
     };
