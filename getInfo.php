@@ -1,13 +1,15 @@
 <?php
 include("simple_html_dom.php");
 define("DOI_API_URL", "http://search.crossref.org/dois?q=");
+define("DOI_SEARCH_URL", "http://search.crossref.org/?q=");
 define("ISBN_API_URL", "https://www.googleapis.com/books/v1/volumes?q=isbn:");
 
 /***************/
-// if(isset($_REQUEST["query"])){
-    // echo "<pre>";
-    // print_r(getBibtex($_REQUEST["query"]));
-// }
+if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"] === "json"){
+    header('Content-type: application/json');
+    $result = getBibtex($_REQUEST["query"]);
+    echo json_encode($result);
+}
 /***************/
 
 function getBibtex($query){
@@ -16,20 +18,18 @@ function getBibtex($query){
         return getBibtexFromURL($query);
     } else {
         $doi_url    = DOI_API_URL . urlencode($query);
-        $doi_result = json_decode(file_get_contents($service_url));
-        $valid = (count($doi_result) !== 0);
-        if( $valid ){
+        $doi_result = json_decode(file_get_contents($doi_url));
+        if( count($doi_result) !== 0 ){
             return getBibtexFromDOI($query);
         } else {
             $isbn_url    = ISBN_API_URL . urlencode(cleanISBN($query));
             $isbn_result = json_decode(file_get_contents($isbn_url));
-            $valid = ($results["isbn"]->totalItems > 0);
-            if($valid){
+            if( $isbn_result->totalItems > 0 ){
                 return getBibtexFromISBN($query);
             }
         }
     }
-    return returnStructure(false, false, false);
+    return returnStructure(false, false, $query, false, false);
 }
 
 function getBibtexFromURL($url){
@@ -45,7 +45,7 @@ function getBibtexFromISBN($isbn){
 }
 
 function getDataFromDOI($doi){
-    $url = DOI_API_URL . urlencode($doi);
+    $url = DOI_SEARCH_URL . urlencode($doi);
     $html = @file_get_html( $url );
     if(!$html){
         $page = get_web_page($url);
@@ -54,7 +54,8 @@ function getDataFromDOI($doi){
     $result = array();
     $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
     $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
-    $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
+    if($listing->find('p.expand',0) !== null)
+        $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
     $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
     $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
     $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
@@ -111,7 +112,7 @@ function getDataFromURL($url){
 
 function cleanISBN($isbn){ return preg_replace("/[^0-9a-zA-Z]*/","",$isbn); }
 
-function returnStructure($type, $data, $query, $url, $success = true){ return array("type" => $type, "data" => $data, "url" => $url,"query" => $query, "success" => $success); }
+function returnStructure($type, $data, $query, $url = null, $success = true){ return array("type" => $type, "data" => $data, "url" => $url,"query" => $query, "success" => $success); }
 
 function gbooksToArray( $gb ){
     $vi = $gb->volumeInfo;

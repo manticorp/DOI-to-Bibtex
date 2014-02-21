@@ -1,0 +1,72 @@
+body {
+    font-size: 0.9em;
+    max-width: 100%;
+}
+pre {
+    display: block;
+    overflow: scroll;
+    text-wrap: normal;
+    max-width: 100%;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+input,
+.btn { font-family: 'Droid Sans', sans-serif }
+p { }
+.loading-gif-fancy{
+    width: 256px;
+    
+}
+.bibtex-result{
+    width: 100%;
+}
+.btn {
+    cursor: pointer;
+    display: inline-block;
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #eee;
+    text-decoration: none;
+    color: #333;
+    font-size: 0.8em;
+    margin: 4px;
+}
+.bibtex {
+    height: 1.2em;
+    margin-top: 4px;
+    margin-bottom: -4px;
+    display: inline-block;
+    background-image: url('img/BibTeX_logo.svg');
+    background-position: top left;
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 3.5em;
+}
+.latex {
+    height: 1.2em;
+    margin-top: 3px;
+    margin-bottom: -3px;
+    display: inline-block;
+    background-image: url('img/LaTeX_logo.svg');
+    background-position: top left;
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 3em;
+}
+input {
+    display: inline-block;
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #eee;
+    color: #333;
+    margin: 4px;
+}
+.query-input { min-width: 300px }
+.btn:hover { box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.03) inset }
