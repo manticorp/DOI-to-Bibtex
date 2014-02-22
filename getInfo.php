@@ -65,19 +65,40 @@ function getDataFromDOI($doi){
 function getDataFromISBN($isbn){
     $url = ISBN_API_URL . cleanISBN($isbn);
     $results["isbn"] = json_decode(file_get_contents($url));
-    $result = gbooksToArray($results["isbn"]->items[0]);
-    return returnStructure("isbn", array($result), $isbn, $url);
+    $book = $results["isbn"]->items[0];
+    if(isset($book->selfLink)) {
+        $book = json_decode(file_get_contents($results["isbn"]->items[0]->selfLink));
+    }
+    $result = gbooksToArray($book);
+    return returnStructure("isbn", array($result["result"]), $isbn, $url);
 }
 
 function getDataFromURL($url){
     if(strpos($url, "arxiv.org") !== false) {
-        if(strpos($url, "arxiv.org/pdf/")){
-            $url = str_replace("http://arxiv.org/pdf/","http://arxiv.org/abs/",$url);
+        $url = str_replace("arxiv.org/pdf/","arxiv.org/abs/",$url);
+        if(strpos($url, "arxiv.org/abs/") !== false){
+            $html = getHTML($url);
+            return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
         }
+    } else if(strpos($url, ".amazon.") !== false) {
         $html = getHTML($url);
+        if($html->find("#nav-subnav",0) !== null){
+            if(strtolower(trim($html->find("#nav-subnav li",0)->find('a',0)->plaintext)) === "books"){
+                $buyingbox = $html->find("#ps-content .buying", 0);
+                if($buyingbox !== null){
+                    foreach($buyingbox->find("span") as $key => $val){
+                        if(strpos($val->plaintext, "ISBN-10") !== false) break;
+                    }
+                    $isbn = trim($buyingbox->find("span", $key+1)->plaintext);
+                    return getDataFromISBN($isbn);
+                }
+            }
+        }
         return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
     }
-    $html = getHTML( $url );
+    if(!isset($html)){
+        $html = getHTML( $url );
+    }
     $result = array();
     if($html->find("meta[property=og:site_name]",0) !== null && $html->find("meta[property=og:site_name]",0)->content == "YouTube"){
         $result[0] = array_merge($result[0], youtubeToData($html));
@@ -130,18 +151,19 @@ function gbooksToArray( $gb ){
     $result["title"]        = trim($vi->title);
     $result["authors"]      = trim(implode(" and ", $vi->authors));
     $result["type"]         = "book";
-    $result["link"]         = trim($gb->selfLink);
+    // $result["link"]         = trim($gb->selfLink);
     $result["categories"]   = trim(implode(", ", $vi->categories));
-    $result["description"]  = trim($vi->description);
+    // $result["description"]  = trim($vi->description);
     $result["publisher"]    = trim($vi->publisher);
     $date = new DateTime($vi->publishedDate);
     $result["year"]         = trim($date->format("Y"));
     $result["month"]        = trim($date->format("m"));
     $result["day"]          = trim($date->format("d"));
+    $result["pagecount"]    = trim($vi->pageCount);
     foreach($vi->industryIdentifiers as $identifier){
-        $result[str_replace("_","",strtolower($identifier->type))] = $identifier->identifier;
+        if($identifier->type === "ISBN_10" || $identifier->type === "ISBN_13") $result["isbn"] = $identifier->identifier;
     }
-    return $result;
+    return array("result"=>$result);
 }
 
 function arxivToData( $html ){
