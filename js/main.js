@@ -11,13 +11,14 @@ $(function(){
             "Roasting Gnome Hats"
         ],
         start: function(){
+            this.stop();
             $loadingbox = $('<div class="loadingbox">').append($('<p id="loadingText"></p>')).append($('<img class="loading-gif-fancy" src="img/loading-fancy.gif" alt="loading..."/>'));
             $('#result').html('').append($loadingbox);
             var that = this;
             $('#result #loadingText').text(this.texts[0] + "...");
             this.event = setInterval(function(){
                 $('#result #loadingText').text(that.randomText() + "...");
-            },500);
+            },750);
         },
         stop: function(){
             clearInterval(this.event);
