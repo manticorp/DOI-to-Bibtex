@@ -75,7 +75,8 @@ function getDataFromDOI($doi){
         $result["month"]   = $date->format("m");
         // Only check for a day if the month was listed.
         // In this case, a day is listed if the first character of the date part is numeric
-        if(is_numeric(trim($listing->find('p.extra span', 0)->find('b',1)->plaintext)[0])){
+        $found = trim($listing->find('p.extra span', 0)->find('b',1)->plaintext);
+        if(is_numeric(substr($found,0,1))){
             $result["day"]   = $date->format("d");
         }
     }
