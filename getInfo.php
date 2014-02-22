@@ -56,8 +56,14 @@ function getDataFromDOI($doi){
     $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
     $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
     $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
-    $result["year"]    = trim(getNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
-    $result["month"]   = trim(removeNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext));
+    $date = new DateTime($listing->find('p.extra span', 0)->find('b',1)->plaintext);
+    $result["year"]    = $date->format("Y");
+    if(trim(removeNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext)) !== ""){
+        $result["month"]   = $date->format("m");
+        if(is_numeric(trim($listing->find('p.extra span', 0)->find('b',1)->plaintext)[0])){
+            $result["day"]   = $date->format("d");
+        }
+    }
     $result["DOI"]     = $doi;
     return returnStructure("doi", array($result), $doi, $url);
 }

@@ -1,4 +1,31 @@
 $(function(){
+    var loading = {
+        event: null,
+        number: 0,
+        texts: [
+            "Dispatching Gremlins",
+            "Applying Magic Powder",
+            "Buttering Unicorns",
+            "Marinating API Result",
+            "BBQing BiBTeX",
+            "Roasting Gnome Hats"
+        ],
+        start: function(){
+            $loadingbox = $('<div class="loadingbox">').append($('<p id="loadingText"></p>')).append($('<img class="loading-gif-fancy" src="img/loading-fancy.gif" alt="loading..."/>'));
+            $('#result').html('').append($loadingbox);
+            var that = this;
+            $('#result #loadingText').text(this.texts[0] + "...");
+            this.event = setInterval(function(){
+                $('#result #loadingText').text(that.randomText() + "...");
+            },500);
+        },
+        stop: function(){
+            clearInterval(this.event);
+        },
+        randomText: function(){
+            return this.texts[Math.floor(Math.random()*this.texts.length)];
+        }
+    };
     $(window).bind( 'hashchange', function(e) {
         doQuery();
     });
@@ -23,7 +50,7 @@ $(function(){
         var hashParams = $.deparam.fragment()
         var query = hashParams.query || "";
         if(query !== "") {
-            loading();
+            loading.start();
             getAndDisplayBibtex(query);
         } else {
             noQuery();
@@ -45,10 +72,6 @@ $(function(){
         $('#result').html('').append($failtext);
     }
     
-    function loading(){
-        $('#result').html('<img class="loading-gif-fancy" src="img/loading-fancy.gif" alt="loading..."/>');
-    }
-    
     function noQuery(){
         $('#result').html('<p>Please enter a DOI/ISBN/URL to be processed</p>');
     }
@@ -65,6 +88,7 @@ $(function(){
         
         // get JSON from url
         $.getJSON(url, data, function(data){
+            loading.stop();
             if(data.success === false || data.success === 'false'){
                 failure(data);
             } else {
