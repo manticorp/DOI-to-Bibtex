@@ -68,8 +68,10 @@ $(function(){
     }
     
     function failure(data){
-        var failtext = "<span class='error'>Sorry<span>, your search <strong>'" + data.query + "'</strong> returned no results";
-        var $failtext = $('<p>').html(failtext);
+        var failtext = "<span class='error-head'>Sorry</span>, your search <strong class='query-term'>'" + data.query + "'</strong> returned no results.";
+        var $failtext = $('<div class="error">').append($('<p>').html(failtext));
+        if(typeof data.message !== "undefined") $failtext.append($("<p>").html("Message from server: <span class='query-term'>" + data.message + "</span>"));
+        if(data.url) $failtext.append($("<p>").html("Url used to query: <a href='"+data.url+"'>"+data.url+"</a>"));
         $('#result').html('').append($failtext);
     }
     
@@ -94,6 +96,9 @@ $(function(){
                 failure(data);
             } else {
                 $('#result').html('');
+                if(data.message){
+                    $('#result').append("<p class='message'>" + data.message + "</p>");
+                }
                 $.each(data.bibtex, function(i, bibtex) {
                     $('#result').append(buildResult(bibtex, i));
                 });

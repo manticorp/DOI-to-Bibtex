@@ -6,7 +6,8 @@
     </head>
     <body>
         <h1>DOI/ISBN/URL to Bibtex converter</h1>
-        <p>Input any DOI, URL or ISBN number into the box below and our server gremlins will try to find what you're referring to and generate a bibtex entry for that content</p>
+        <p>Input any DOI, URL or ISBN number into the box below and our server gremlins will try to find what you're referring to and generate a bibtex entry for that content.</p>
+        <p>Please note, you can enter an <strong>arxiv.org</strong> url (or similar) in the box above and it will automatically fetch DOI data. Similarly, you can put an <strong>amazon</strong> link to a book in and it will fetch ISBN data.</p>
         <h2>Input DOI/ISBN/URL</h2>
         <form method="POST" action="" id="queryform" onsubmit="return false;" >
             <input type="text" name="query" id="query" class="query-input" placeholder="DOI/ISBN/URL, e.g 10.1086/377226" />

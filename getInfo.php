@@ -1,4 +1,16 @@
 <?php
+/**
+function returnStructure($type, $data, $query, $url = null, $success = true, $message = null){ 
+    return array(
+        "type" => $type, 
+        "data" => $data, 
+        "url" => $url,
+        "query" => $query, 
+        "success" => $success, 
+        "message"=>$message
+    ); 
+}
+**/
 include("simple_html_dom.php");
 define("DOI_API_URL", "http://search.crossref.org/dois?q=");
 define("DOI_SEARCH_URL", "http://search.crossref.org/?q="); //Because the API sucks and doesn't have any info in it.
@@ -7,8 +19,12 @@ define("ISBN_API_URL", "https://www.googleapis.com/books/v1/volumes?q=isbn:");
 /******** Handle JSON request *******/
 if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"] === "json"){
     header('Content-type: application/json');
-    $result = getBibtex($_REQUEST["query"]);
-    echo json_encode($result);
+    try{
+        $result = getBibtex($_REQUEST["query"]);
+        echo json_encode($result);
+    } catch(Exception $e) {
+        sendResponse( 400, null, $_REQUEST["query"], null, false, $e->getMessage());
+    }
 }
 /***************/
 
@@ -16,20 +32,14 @@ if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"
 // (DOI, ISBN, URL)
 function getBibtex($query){
     $valid = false;
-    if(filter_var($query, FILTER_VALIDATE_URL)){
+    if( filter_var( $query, FILTER_VALIDATE_URL ) ) {
         return getBibtexFromURL($query);
-    } else {
-        if( testDOI( $query ) ){
-            return getBibtexFromDOI($query);
-        } else {
-            $isbn_url    = ISBN_API_URL . urlencode(cleanISBN($query));
-            $isbn_result = json_decode(file_get_contents($isbn_url));
-            if( $isbn_result->totalItems > 0 ){
-                return getBibtexFromISBN($query);
-            }
-        }
+    } else if( testISBN( $query ) ) {
+        return getBibtexFromISBN($query);
+    } else if( testDOI( $query ) ) {
+        return getBibtexFromDOI($query);
     }
-    return returnStructure(false, false, $query, false, false);
+    return returnStructure(false, null, $query, false, false, "Query identified as not a valid DOI, ISBN or URL.");
 }
 
 // These three functions just call the appropriate function...
@@ -50,8 +60,6 @@ function getBibtexFromISBN($isbn){
 function getDataFromDOI($doi){
     // defined above
     $url = DOI_SEARCH_URL . urlencode($doi);
-    echo $url;
-    exit();
     //fetch HTML
     $html = getHTML( $url );
     $result = array();
@@ -88,7 +96,7 @@ function getDataFromDOI($doi){
 
 function getDataFromISBN($isbn){
     // defined above.
-    $url = ISBN_API_URL . cleanISBN($isbn);
+    $url = ISBN_API_URL . urlencode(cleanISBN($isbn));
     $results["isbn"] = json_decode(file_get_contents($url));
     $book = $results["isbn"]->items[0];
     // selfLinks contain more/better info.
@@ -100,8 +108,10 @@ function getDataFromISBN($isbn){
 }
 
 function getDataFromURL($url){
-    //Detect some special cases
+    // Detect some special cases
     // Arxiv links
+    $message = null;
+    $result = array();
     if(strpos($url, "arxiv.org") !== false) {
         $url = str_replace("arxiv.org/pdf/","arxiv.org/abs/",$url);
         if(strpos($url, "arxiv.org/abs/") !== false){
@@ -121,16 +131,18 @@ function getDataFromURL($url){
                     }
                     $isbn = trim($buyingbox->find("span", $key+1)->plaintext);
                     // If it is a book, use the ISBN number instead.
-                    return getDataFromISBN($isbn);
+                    if(testISBN($isbn)) return getDataFromISBN($isbn);
+                    else {
+                        $message = "An ISBN was detected but could not retrieve book information from google books API. Attempted to scrap book data from Amazon.";
+                        return getBookDataAmazon($html, $isbn, $url, $message);
+                    }
                 }
             }
         }
-        return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
     }
     if(!isset($html)){
         $html = getHTML( $url );
     }
-    $result = array();
     // Youtube case
     if($html->find("meta[property=og:site_name]",0) !== null && $html->find("meta[property=og:site_name]",0)->content == "YouTube"){
         $result[0] = array_merge($result[0], youtubeToData($html));
@@ -156,7 +168,33 @@ function getDataFromURL($url){
     $date = new DateTime();
     $result[1]["note"] = "Accessed: " . $date->format("Y-m-d h:i:s");
     
-    return returnStructure("url", $result, $url, $url);
+    return returnStructure("url", $result, $url, $url, true, $message);
+}
+
+function getBookDataAmazon($html, $isbn, $url, $message = null){
+    $result = array();
+    $result["type"] = "book";
+    foreach(array("description", "author", "keywords", "title") as $tag){
+        if($html->find("meta[name=".$tag."]",0) != null){
+            $result[$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
+        }
+    }
+    $tag = "#handleBuy div.buying";
+    $found = $html->find($tag,2);
+    if($found != null){
+        $authors = Array();
+        $span = $found->find("span",3);
+        if($span !== null && strpos($span->plaintext,"(Author)") !== false){
+            $result["authors"] = trim(str_replace(" (Author)",", ",$span->plaintext));
+        }
+        $result["authors"] = substr($result["authors"],0,-1);
+    }
+    // $tag = "";
+    // if($html->find($tag,0) != null){
+        // $result[""] = trim($html->find($tag,0)->plaintext)
+    // }
+    
+    return returnStructure("isbn", array($result), $isbn, $url, true, $message);
 }
 
 
@@ -177,11 +215,85 @@ function testDOI( $doi ){
     return (count($doi_result) === 1 );
 }
 
+function testISBN( $isbn ){
+    if((validateISBN(cleanISBN($isbn)))){
+        $isbn_url    = ISBN_API_URL . urlencode(cleanISBN($isbn));
+        $isbn_result = json_decode(file_get_contents($isbn_url));
+        return ($isbn_result->totalItems > 0 );
+    }
+    return false;
+}
+
 // Cleans ISBNs of uneeded characters (slashes, hyphens etc))
-function cleanISBN( $isbn ){ return preg_replace("/[^0-9a-zA-Z]*/","",$isbn); }
+function cleanISBN($isbn){
+    $isbn = preg_replace("/ISBN(-10|-13)?(:)?( )?/i","", trim($isbn));
+    return preg_replace("/[^0-9X]/","",$isbn);
+}
+
+function validateISBN( $isbn ) {
+    $isbn = trim($isbn);
+    $last = substr($isbn, -1);
+    $stripped = preg_replace( '/[^0-9]/', '', $isbn );
+    $length = strlen($stripped);
+    $sum = 0;
+
+    if( $length == 9 and ( $last == 'x' or $last == 'X' )  ) {
+	$stripped = $stripped . 'X' ;
+	$length = 10;
+    }
+
+    if( $length == 10 ) {
+        // ISBN-10
+
+	for( $i = 0 ; $i < 10 ; $i++ ) {
+	    $value = substr( $stripped, $i, 1 );
+            $value = ( $value == 'X' ) ? 10 : (int) $value ;
+	    $sum += ( 10 - $i ) * $value ;
+        }
+
+        $remainder = $sum % 11;
+
+        return empty( $remainder ) ;
+
+    } elseif( $length == 13 ) {
+        // ISBN-13
+
+        for( $i = 0 ; $i < 12 ; $i++ ) {
+            $j = $i % 2;
+            $digit = (int) substr( $stripped, $i, 1 );
+
+            if( empty($j) ) {
+                $sum += $digit;
+            } else {
+                $sum += 3 * $digit;
+            }
+        }
+
+        $remainder = $sum % 10 ;
+
+        $checkdigit = empty($remainder) ? 0 : 10 - $remainder ;
+
+        $lastdigit = substr( $stripped, -1, 1 );
+
+        return ( $lastdigit == $checkdigit ) ;
+
+    } else {
+        // Invalid
+        return false;
+    }
+}
 
 // Defines a common return structure for our data
-function returnStructure($type, $data, $query, $url = null, $success = true){ return array("type" => $type, "data" => $data, "url" => $url,"query" => $query, "success" => $success); }
+function returnStructure($type, $data, $query, $url = null, $success = true, $message = null){ 
+    return array(
+        "type" => $type, 
+        "data" => $data, 
+        "url" => $url,
+        "query" => $query, 
+        "success" => $success, 
+        "message"=>$message
+    ); 
+}
 
 //converts a gbooks result into a useable array
 function gbooksToArray( $gb ){
@@ -191,9 +303,11 @@ function gbooksToArray( $gb ){
     $result["authors"]      = trim(implode(" and ", $vi->authors));
     $result["type"]         = "book";
     // $result["link"]         = trim($gb->selfLink);
-    $result["categories"]   = trim(implode(", ", $vi->categories));
+    if(isset($result["categories"]))
+        $result["categories"]   = trim(implode(", ", $vi->categories));
     // $result["description"]  = trim($vi->description);
-    $result["publisher"]    = trim($vi->publisher);
+    if(isset($result["publisher"]))
+        $result["publisher"]    = trim($vi->publisher);
     $date = new DateTime($vi->publishedDate);
     $result["year"]         = trim($date->format("Y"));
     $result["month"]        = trim($date->format("m"));
