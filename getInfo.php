@@ -55,8 +55,9 @@ function getDataFromDOI($doi){
     $result = array();
     $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
     $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
-    if($listing->find('p.expand',0) !== null)
+    if($listing->find('p.expand',0) !== null){
         $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
+    }
     $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
     $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
     $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
