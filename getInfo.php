@@ -50,6 +50,8 @@ function getBibtexFromISBN($isbn){
 function getDataFromDOI($doi){
     // defined above
     $url = DOI_SEARCH_URL . urlencode($doi);
+    echo $url;
+    exit();
     //fetch HTML
     $html = getHTML( $url );
     $result = array();
@@ -172,7 +174,7 @@ function getHTML($url){
 function testDOI( $doi ){
     $doi_url    = DOI_API_URL . urlencode($doi);
     $doi_result = json_decode(file_get_contents($doi_url));
-    return (count($doi_result) !== 0 );
+    return (count($doi_result) === 1 );
 }
 
 // Cleans ISBNs of uneeded characters (slashes, hyphens etc))
