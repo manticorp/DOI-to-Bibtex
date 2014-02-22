@@ -1,10 +1,10 @@
 <?php
 include("simple_html_dom.php");
 define("DOI_API_URL", "http://search.crossref.org/dois?q=");
-define("DOI_SEARCH_URL", "http://search.crossref.org/?q=");
+define("DOI_SEARCH_URL", "http://search.crossref.org/?q="); //Because the API sucks and doesn't have any info in it.
 define("ISBN_API_URL", "https://www.googleapis.com/books/v1/volumes?q=isbn:");
 
-/***************/
+/******** Handle JSON request *******/
 if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"] === "json"){
     header('Content-type: application/json');
     $result = getBibtex($_REQUEST["query"]);
@@ -12,6 +12,8 @@ if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"
 }
 /***************/
 
+// Sorts through the query to see if it matches any of these patters
+// (DOI, ISBN, URL)
 function getBibtex($query){
     $valid = false;
     if(filter_var($query, FILTER_VALIDATE_URL)){
@@ -30,6 +32,8 @@ function getBibtex($query){
     return returnStructure(false, false, $query, false, false);
 }
 
+// These three functions just call the appropriate function...
+// bit pointless but could be useful later.
 function getBibtexFromURL($url){
     return generateBibtex(getDataFromURL($url));;
 }
@@ -42,8 +46,11 @@ function getBibtexFromISBN($isbn){
     return generateBibtex(getDataFromISBN($isbn));
 }
 
+// Simply scraps the crossref search site for info and returns it.
 function getDataFromDOI($doi){
+    // defined above
     $url = DOI_SEARCH_URL . urlencode($doi);
+    //fetch HTML
     $html = getHTML( $url );
     $result = array();
     $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
@@ -56,10 +63,17 @@ function getDataFromDOI($doi){
     $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
     $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
     $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
+    
+    // Because of the peculiar/poor formatting of the crossref site, we have to do some tricks to scrape the date.
+    // First, load it into the DateTime object
     $date = new DateTime($listing->find('p.extra span', 0)->find('b',1)->plaintext);
+    //Now they all have a year, so this part is easy.
     $result["year"]    = $date->format("Y");
+    //Now we need to see if a month is listed by removing all numbers from the string and seeing if there's anything left.
     if(trim(removeNumbersFromString($listing->find('p.extra span', 0)->find('b',1)->plaintext)) !== ""){
         $result["month"]   = $date->format("m");
+        // Only check for a day if the month was listed.
+        // In this case, a day is listed if the first character of the date part is numeric
         if(is_numeric(trim($listing->find('p.extra span', 0)->find('b',1)->plaintext)[0])){
             $result["day"]   = $date->format("d");
         }
@@ -69,9 +83,11 @@ function getDataFromDOI($doi){
 }
 
 function getDataFromISBN($isbn){
+    // defined above.
     $url = ISBN_API_URL . cleanISBN($isbn);
     $results["isbn"] = json_decode(file_get_contents($url));
     $book = $results["isbn"]->items[0];
+    // selfLinks contain more/better info.
     if(isset($book->selfLink)) {
         $book = json_decode(file_get_contents($results["isbn"]->items[0]->selfLink));
     }
@@ -80,15 +96,20 @@ function getDataFromISBN($isbn){
 }
 
 function getDataFromURL($url){
+    //Detect some special cases
+    // Arxiv links
     if(strpos($url, "arxiv.org") !== false) {
         $url = str_replace("arxiv.org/pdf/","arxiv.org/abs/",$url);
         if(strpos($url, "arxiv.org/abs/") !== false){
             $html = getHTML($url);
             return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
         }
-    } else if(strpos($url, ".amazon.") !== false) {
+    } 
+    // Amazon Links 
+    else if(strpos($url, ".amazon.") !== false) {
         $html = getHTML($url);
         if($html->find("#nav-subnav",0) !== null){
+            // Checks if it's a book
             if(strtolower(trim($html->find("#nav-subnav li",0)->find('a',0)->plaintext)) === "books"){
                 $buyingbox = $html->find("#ps-content .buying", 0);
                 if($buyingbox !== null){
@@ -96,6 +117,7 @@ function getDataFromURL($url){
                         if(strpos($val->plaintext, "ISBN-10") !== false) break;
                     }
                     $isbn = trim($buyingbox->find("span", $key+1)->plaintext);
+                    // If it is a book, use the ISBN number instead.
                     return getDataFromISBN($isbn);
                 }
             }
@@ -106,9 +128,11 @@ function getDataFromURL($url){
         $html = getHTML( $url );
     }
     $result = array();
+    // Youtube case
     if($html->find("meta[property=og:site_name]",0) !== null && $html->find("meta[property=og:site_name]",0)->content == "YouTube"){
         $result[0] = array_merge($result[0], youtubeToData($html));
     } else {
+        // Otherwise, just scrape generic meta data.
         foreach(array("description", "author", "keywords") as $tag){
             if($html->find("meta[name=".$tag."]",0) != null){
                 $result[0][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
@@ -116,7 +140,7 @@ function getDataFromURL($url){
         }
         $result[0]["title"] = trim($html->find("title",0)->plaintext);
     }
-    
+    // we need to return two arrays, one for old bibtex and one for biblatex ([1] and [0] respectively)
     $result[1] = $result[0];
     
     $result[0]["type"] = "ONLINE";
@@ -132,6 +156,8 @@ function getDataFromURL($url){
     return returnStructure("url", $result, $url, $url);
 }
 
+
+//Just fetches the HTML in simple_html_dom format
 function getHTML($url){
     $html = @file_get_html( $url );
     if(!$html){
@@ -141,16 +167,20 @@ function getHTML($url){
     return $html;
 }
 
+// Tests if $doi is a DOI or not
 function testDOI( $doi ){
     $doi_url    = DOI_API_URL . urlencode($doi);
     $doi_result = json_decode(file_get_contents($doi_url));
     return (count($doi_result) !== 0 );
 }
 
+// Cleans ISBNs of uneeded characters (slashes, hyphens etc))
 function cleanISBN( $isbn ){ return preg_replace("/[^0-9a-zA-Z]*/","",$isbn); }
 
+// Defines a common return structure for our data
 function returnStructure($type, $data, $query, $url = null, $success = true){ return array("type" => $type, "data" => $data, "url" => $url,"query" => $query, "success" => $success); }
 
+//converts a gbooks result into a useable array
 function gbooksToArray( $gb ){
     $vi = $gb->volumeInfo;
     $result = array();
@@ -172,13 +202,16 @@ function gbooksToArray( $gb ){
     return array("result"=>$result);
 }
 
+// Scrapes arxiv page for data
 function arxivToData( $html ){
     $result = array();
+    // If a DOI is present, also scrape that data
     if($html->find("td.doi",0) !== null){
         $doi = $html->find("td.doi a",0)->plaintext;
         $doi_data = getDataFromDOI($doi);
         $result = $doi_data["data"][0];
     }
+    // ... but replace it with arxiv data where possible.
     foreach(array("keywords", "description", "title") as $tag){
         if($html->find("meta[name=citation_".$tag."]",0) != null){
             $result[$tag] = trim($html->find("meta[name=citation_".$tag."]",0)->content);
