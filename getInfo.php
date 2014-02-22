@@ -4,8 +4,6 @@ define("DOI_API_URL", "http://search.crossref.org/dois?q=");
 define("DOI_SEARCH_URL", "http://search.crossref.org/?q="); //Because the API sucks and doesn't have any info in it.
 define("ISBN_API_URL", "https://www.googleapis.com/books/v1/volumes?q=isbn:");
 
-error_reporting(0);
-
 /******** Handle JSON request *******/
 if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"] === "json"){
     header('Content-type: application/json');
@@ -107,9 +105,8 @@ function getDataFromURL($url){
             $html = getHTML($url);
             return returnStructure("arxiv", array(arxivToData($html)), $url, $url);
         }
-    } 
-    // Amazon Links 
-    else if(strpos($url, ".amazon.") !== false) {
+    } else if(strpos($url, ".amazon.") !== false) {
+        // Amazon links
         $html = getHTML($url);
         if($html->find("#nav-subnav",0) !== null){
             // Checks if it's a book
