@@ -21,9 +21,13 @@ if(isset($_REQUEST["query"]) && isset($_REQUEST["format"]) && $_REQUEST["format"
     header('Content-type: application/json');
     try{
         $result = getBibtex($_REQUEST["query"]);
-        echo json_encode($result);
+        if($result["success"] === true){
+            sendResponse( 200, $result );
+        } else {
+            sendResponse( 400, $result );
+        }
     } catch(Exception $e) {
-        sendResponse( 400, null, $_REQUEST["query"], null, false, $e->getMessage());
+        sendResponse( 400, array("query" => $_REQUEST["query"], "message"=> $e->getMessage()));
     }
 }
 /***************/
@@ -153,7 +157,28 @@ function getDataFromURL($url){
                 $result[0][$tag] = trim($html->find("meta[name=".$tag."]",0)->content);
             }
         }
-        $result[0]["title"] = trim($html->find("title",0)->plaintext);
+        if($html->find("title",0) !== null) {
+            $result[0]["title"] = trim($html->find("title",0)->plaintext);
+        }
+    }
+/**
+function returnStructure($type, $data, $query, $url = null, $success = true, $message = null){ 
+    return array(
+        "type" => $type, 
+        "data" => $data, 
+        "url" => $url,
+        "query" => $query, 
+        "success" => $success, 
+        "message"=>$message
+    ); 
+}
+**/
+    if(!isset($result[0]) || empty($result[0])){
+        if(substr($url,-4) === ".pdf"){
+            return returnStructure("url", null, $url, $url, false, "Cannot currently parse PDF files.");
+        } else {
+            return returnStructure("url", null, $url, $url, false, "Nothing found on page");
+        }
     }
     // we need to return two arrays, one for old bibtex and one for biblatex ([1] and [0] respectively)
     $result[1] = $result[0];
@@ -411,8 +436,7 @@ function removeNumbersFromString($str){
 
 function generateBibtex($data){
     if($data["success"] === false){
-        throw new Exception("Oops, not a success!");
-        exit();
+        return $data;
     }
     $type   = $data["type"];
     $inputs = $data["data"];

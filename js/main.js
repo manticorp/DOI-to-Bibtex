@@ -107,8 +107,10 @@ $(function(){
             }
         }).fail(function(jqxhr, textStatus, error){
             // error handling
+            loading.stop();
             data = $.parseJSON(jqxhr.responseText);
-            $('#gumtree-listings').append(data.message);
+            console.log(data);
+            failure(data);
         });
     }
     
