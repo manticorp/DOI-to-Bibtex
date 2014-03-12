@@ -76,7 +76,8 @@ function getDataFromDOI($doi){
     $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
     $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
     $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
-    $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
+    if($listing->find('p.extra span', 4) !== null)
+        $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
     $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
     
     // Because of the peculiar/poor formatting of the crossref site, we have to do some tricks to scrape the date.
