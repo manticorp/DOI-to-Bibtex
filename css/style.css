@@ -24,6 +24,11 @@ p { }
     
 }
 
+#logo{
+    margin-bottom:-6px;
+    margin-right: 6px;
+}
+
 .loadingbox {
     min-width: 256px;
     max-width: 256px;
