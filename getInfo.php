@@ -72,10 +72,14 @@ function getDataFromDOI($doi){
     if($listing->find('p.expand',0) !== null){
         $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
     }
-    $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
-    $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
-    $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
-    $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
+    if($listing->find('p.extra span', 0) !== null)
+        $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
+    if($listing->find('p.extra span', 1) !== null)
+        $result["journal"] = trim($listing->find('p.extra span', 1)->find('b',0)->plaintext);
+    if($listing->find('p.extra span', 2) !== null)
+        $result["volume"]  = trim($listing->find('p.extra span', 2)->find('b',0)->plaintext);
+    if($listing->find('p.extra span', 3) !== null)
+        $result["issue"]   = trim($listing->find('p.extra span', 3)->find('b',0)->plaintext);
     if($listing->find('p.extra span', 4) !== null)
         $result["pages"]   = trim($listing->find('p.extra span', 4)->find('b',0)->plaintext) . " to " . trim($listing->find('p.extra span', 4)->find('b',1)->plaintext);
     $result["link"]    = trim($listing->find('div.item-links-outer div.item-links a',0)->href);
