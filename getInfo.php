@@ -380,7 +380,22 @@ function arxivToData( $html ){
     if(count($authors) > 0){
         $result["author"] = implode(" and ", $authors);
     }
+    $result = recursive_unescape($result);
     return $result;
+}
+
+function recursive_unescape($var){
+    if(is_array($var)){
+        $temparray = [];
+        foreach($var as $key => $val){
+            $temparray[$key] = recursive_unescape($val);
+        }
+        return $temparray;
+    } else if(is_string($var)) {
+        return html_entity_decode($var);
+    } else {
+        return $var;
+    }
 }
 
 function youtubeToData($html){
