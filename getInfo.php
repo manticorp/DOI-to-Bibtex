@@ -70,7 +70,7 @@ function getDataFromDOI($doi){
     $listing = $html->find('.container-fluid .span9 table tbody tr td.item-data', 0);
     $result["title"]   = trim($listing->find('p.lead', 0)->plaintext);
     if($listing->find('p.expand',0) !== null){
-        $result["authors"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
+        $result["author"] = trim(str_replace(", ", " and ", preg_replace("/Author[s]?[:]?/i", "", $listing->find('p.expand',0)->plaintext)));
     }
     if($listing->find('p.extra span', 0) !== null)
         $result["type"]    = getBibtexType(trim($listing->find('p.extra span', 0)->find('b',0)->plaintext));
@@ -215,9 +215,9 @@ function getBookDataAmazon($html, $isbn, $url, $message = null){
         $authors = Array();
         $span = $found->find("span",3);
         if($span !== null && strpos($span->plaintext,"(Author)") !== false){
-            $result["authors"] = trim(str_replace(" (Author)",", ",$span->plaintext));
+            $result["author"] = trim(str_replace(" (Author)",", ",$span->plaintext));
         }
-        $result["authors"] = substr($result["authors"],0,-1);
+        $result["author"] = substr($result["author"],0,-1);
     }
     // $tag = "";
     // if($html->find($tag,0) != null){
@@ -330,7 +330,7 @@ function gbooksToArray( $gb ){
     $vi = $gb->volumeInfo;
     $result = array();
     $result["title"]        = trim($vi->title);
-    $result["authors"]      = trim(implode(" and ", $vi->authors));
+    $result["author"]      = trim(implode(" and ", $vi->authors));
     $result["type"]         = "book";
     // $result["link"]         = trim($gb->selfLink);
     if(isset($result["categories"]))
@@ -378,7 +378,7 @@ function arxivToData( $html ){
         $authors[] = $author->content;
     }
     if(count($authors) > 0){
-        $result["authors"] = implode(" and ", $authors);
+        $result["author"] = implode(" and ", $authors);
     }
     return $result;
 }
