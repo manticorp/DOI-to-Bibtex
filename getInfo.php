@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
 function returnStructure($type, $data, $query, $url = null, $success = true, $message = null){ 
     return array(
@@ -316,13 +316,89 @@ function validateISBN( $isbn ) {
 // Defines a common return structure for our data
 function returnStructure($type, $data, $query, $url = null, $success = true, $message = null){ 
     return array(
-        "type" => $type, 
-        "data" => $data, 
+        "type" => recursive_unescape($type), 
+        "data" => recursive_unescape($data), 
         "url" => $url,
         "query" => $query, 
         "success" => $success, 
-        "message"=>$message
+        "message"=> $message
     ); 
+}
+
+function recursive_unescape($var){
+    if(is_array($var)){
+        $temparray = [];
+        foreach($var as $key => $val){
+            $temparray[$key] = recursive_unescape($val);
+        }
+        return $temparray;
+    } else if(is_string($var)) {
+        $var = html_entity_decode(bibtex_escape($var));
+        $var = str_replace('{', '\{', $var);
+        $var = str_replace('&', '\&', $var);
+        $var = str_replace('$', '\$', $var);
+        return bibtex_escape($var);
+    } else {
+        return $var;
+    }
+}
+
+// Escapes the special bibtex chars. This is *not* comprehensive
+// and should be updated when I get a chance!
+function bibtex_escape($str){
+    $replacements = array(
+        "é" => '\\\'{e}',
+        "í" => '\\\'{i}',
+        "ó" => '\\\'{o}',
+        "ú" => '\\\'{u}',
+        "É" => '\\\'{E}',
+        "Í" => '\\\'{I}',
+        "Ó" => '\\\'{O}',
+        "Ú" => '\\\'{U}',
+        "ý" => '\\\'{y}',
+        "Ý" => '\\\'{Y}',
+        "Á" => '\\\'{A}',
+        "Â" => '\\^{A}',
+        "Ã" => '\\~{A}',
+        "Ä" => '\\"{A}',
+        "Æ" => '\\AE',
+        "Ç" => '\\c{c}',
+        "È" => '\\`{E}',
+        "Ê" => '\\^{E}',
+        "Ë" => '\\"{E}',
+        "Ì" => '\\`{I}',
+        "Î" => '\\^{I}',
+        "Ï" => '\\"{I}',
+        "Ñ" => '\\~{N}',
+        "Ò" => '\\`{O}',
+        "Ô" => '\\^{O}',
+        "Õ" => '\\~{O}',
+        "Ö" => '\\"{O}',
+        "Ù" => '\\`{U}',
+        "Û" => '\\^{U}',
+        "Ü" => '\\"{U}',
+        "è" => '\\`{e}',
+        "ê" => '\\^{e}',
+        "ë" => '\\"{e}',
+        "ì" => '\\`{i}',
+        "î" => '\\^{i}',
+        "ï" => '\\"{i}',
+        "ñ" => '\\~{n}',
+        "ò" => '\\`{o}',
+        "ô" => '\\^{o}',
+        "õ" => '\\~{o}',
+        "ö" => '\\"{o}',
+        "ø" => '\\o',
+        "ù" => '\\`{u}',
+        "û" => '\\^{u}',
+        "ü" => '\\"{u}',
+        "ÿ" => '\\"{y}',
+        "ß" => 'B'
+    );
+    foreach($replacements as $n => $r){
+        $str = str_replace($n, $r, $str);
+    }
+    return $str;
 }
 
 //converts a gbooks result into a useable array
@@ -380,22 +456,7 @@ function arxivToData( $html ){
     if(count($authors) > 0){
         $result["author"] = implode(" and ", $authors);
     }
-    $result = recursive_unescape($result);
     return $result;
-}
-
-function recursive_unescape($var){
-    if(is_array($var)){
-        $temparray = [];
-        foreach($var as $key => $val){
-            $temparray[$key] = recursive_unescape($val);
-        }
-        return $temparray;
-    } else if(is_string($var)) {
-        return html_entity_decode($var);
-    } else {
-        return $var;
-    }
 }
 
 function youtubeToData($html){
