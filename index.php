@@ -31,7 +31,7 @@
         </form>
         <h2>Result</h2>
         <div id="result"></div>
-        <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.0.min.js"></script>
         <script type="text/javascript" src="js/ZeroClipboard.min.js"></script>
         <script type="text/javascript" src="js/jquery-zeroclipboard.js"></script>
         <script type="text/javascript" src="js/jquery.ba-bbq.min.js"></script>
