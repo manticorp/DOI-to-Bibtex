@@ -1,7 +1,7 @@
 <html>
     <head>
         <title>DOI/ISBN/URL to BibTeX Converter<?if(isset($_REQUEST["query"])){ echo " - " . $_REQUEST["query"];};?></title>
-        <link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700' rel='stylesheet' type='text/css'>
+        <link href='https://fonts.googleapis.com/css?family=Droid+Sans:400,700' rel='stylesheet' type='text/css'>
         <link href='css/style.css' rel='stylesheet' type='text/css'>
         
         <link rel="apple-touch-icon" sizes="57x57" href="apple-touch-icon-57x57.png">
